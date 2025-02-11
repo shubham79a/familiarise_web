@@ -28,7 +28,7 @@ import { toast } from "@/components/ui/use-toast";
 import { AppointmentsType, RequestStatus } from "@prisma/client";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Calendar } from "./components/Calendar";
+import SlotsCalendar from "./components/SlotsCalendar";
 import { RequestedSlotsDialog } from "./components/RequestedSlotsDialog";
 
 interface Request {
@@ -72,8 +72,8 @@ export function RequestSlotAllocationTab({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [requests, setRequests] = useState<Request[]>([]);
-  const [availableSlots, setAvailableSlots] = useState<Slot[]>([]);
-  const [existingAppointments, setExistingAppointments] = useState<Slot[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [existingAppointments, setExistingAppointments] = useState<string[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [isAllocating, setIsAllocating] = useState(false);
@@ -153,7 +153,7 @@ export function RequestSlotAllocationTab({
                     (slot: any) => slot.slotStartTimeInUTC,
                   ) || [],
                 status: consultation.requestStatus,
-                requiredSlots: 1, // Consultations always require 1 slot
+                requiredSlots: 1, // Consultations require 1 slot like webinars
               })),
             );
           }
@@ -183,10 +183,10 @@ export function RequestSlotAllocationTab({
                       ) || [],
                   ) || [],
                 status: subscription.requestStatus,
-                requiredSlots:
-                  subscription.subscriptionPlan?.callsPerWeek *
-                    4 *
-                    subscription.subscriptionPlan?.durationInMonths || 0,
+                // Subscriptions require slots based on formula like classes
+                requiredSlots: subscription.subscriptionPlan?.callsPerWeek 
+                  ? subscription.subscriptionPlan.callsPerWeek * 4 * (subscription.subscriptionPlan.durationInMonths || 1)
+                  : 0,
               })),
             );
           }
@@ -198,18 +198,31 @@ export function RequestSlotAllocationTab({
         }
 
         // Handle availability
-        let availableSlots: Slot[] = [];
+        let availableSlots: string[] = [];
         if (availabilityRes.ok) {
-          availableSlots = availabilityRes.data;
+          // Flatten weekly and custom slots
+          availableSlots = availabilityRes.data.map((slot: any) => {
+            // Convert to local time for consistent comparison
+            const date = new Date(slot.slotStartTimeInUTC);
+            date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+            return date.toISOString();
+          });
         } else {
           console.error("Failed to fetch availability");
         }
 
         // Handle appointments
-        let existingAppointments: Slot[] = [];
+        let existingAppointments: string[] = [];
         if (appointmentsRes.ok) {
           const appointmentsData = await appointmentsRes.json();
-          existingAppointments = appointmentsData.data;
+          existingAppointments = appointmentsData.data.flatMap((appointment: any) => 
+            (appointment.slotsOfAppointment || []).map((slot: any) => {
+              // Convert to local time for consistent comparison
+              const date = new Date(slot.slotStartTimeInUTC);
+              date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+              return date.toISOString();
+            })
+          );
         } else {
           console.error(
             "Failed to fetch appointments:",
@@ -253,13 +266,18 @@ export function RequestSlotAllocationTab({
   }, [consultantId, type]);
 
   const handleSlotSelect = (slot: string) => {
+    if (!selectedRequest) return;
+
     setSelectedSlots((prevSlots) => {
+      // For consultations, replace the existing selection
+      if (selectedRequest.type === AppointmentsType.CONSULTATION) {
+        return [slot];
+      }
+
+      // For subscriptions, toggle the selection
       if (prevSlots.includes(slot)) {
         return prevSlots.filter((s) => s !== slot);
-      } else if (
-        selectedRequest &&
-        prevSlots.length < selectedRequest.requiredSlots
-      ) {
+      } else if (prevSlots.length < selectedRequest.requiredSlots) {
         return [...prevSlots, slot].sort();
       }
       return prevSlots;
@@ -441,10 +459,7 @@ export function RequestSlotAllocationTab({
   const canAutoAllocate =
     selectedRequest?.requiredSlots &&
     availableSlots.filter(
-      (slot) =>
-        !existingAppointments.some(
-          (existing) => existing.slotStartTimeInUTC === slot.slotStartTimeInUTC,
-        ),
+      (slot) => !existingAppointments.includes(slot)
     ).length >= selectedRequest.requiredSlots;
 
   // Check if manual allocation quota is met
@@ -561,7 +576,16 @@ export function RequestSlotAllocationTab({
                               : "Use Requested Times"}
                           </Button>
                         )}
-                      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                      <Dialog
+                        open={dialogOpen && selectedRequest?.id === request.id}
+                        onOpenChange={(open) => {
+                          if (!open) {
+                            setSelectedRequest(null);
+                            setSelectedSlots([]);
+                          }
+                          setDialogOpen(open);
+                        }}
+                      >
                         <DialogTrigger asChild>
                           <Button
                             variant="outline"
@@ -572,7 +596,7 @@ export function RequestSlotAllocationTab({
                               setDialogOpen(true);
                             }}
                           >
-                            Allocate Slots
+                            Allocate {request.type === AppointmentsType.CONSULTATION ? "1 Slot" : `${request.requiredSlots} Slots`}
                           </Button>
                         </DialogTrigger>
                         <DialogContent
@@ -586,23 +610,49 @@ export function RequestSlotAllocationTab({
                         >
                           <DialogHeader>
                             <DialogTitle>Allocate Slots</DialogTitle>
-                            <DialogDescription>
-                              Choose {request.requiredSlots} slots for{" "}
-                              {request.type.toLowerCase()}
-                            </DialogDescription>
+                          <DialogDescription>
+                            {request.type === AppointmentsType.CONSULTATION ? (
+                              "Choose 1 slot for consultation"
+                            ) : request.type === AppointmentsType.SUBSCRIPTION ? (
+                              <>
+                                Choose {request.requiredSlots} slots for subscription
+                                <br />
+                                <span className="text-sm text-muted-foreground">
+                                  ({request.requiredSlots / 4} slots per week × {request.requiredSlots / (4 * (request.requiredSlots / 4))} months)
+                                </span>
+                                <br />
+                                <span className="text-sm text-muted-foreground">
+                                  All times shown in your browser timezone
+                                </span>
+                              </>
+                            ) : null}
+                          </DialogDescription>
                           </DialogHeader>
-                          <Calendar
-                            availableSlots={availableSlots.map(
-                              (slot) => slot.slotStartTimeInUTC,
-                            )}
-                            existingAppointments={existingAppointments.map(
-                              (slot) => slot.slotStartTimeInUTC,
-                            )}
+                          <SlotsCalendar
+                            availableSlots={availableSlots}
+                            existingAppointments={existingAppointments}
                             onSlotSelect={handleSlotSelect}
                             selectedSlots={selectedSlots}
                             requiredSlots={request.requiredSlots}
                             scheduleType={consultantData.scheduleType}
                             consultantTimezone={consultantData.timezone}
+                            appointmentType={
+                              request.type === AppointmentsType.CONSULTATION 
+                                ? "CONSULTATION" 
+                                : request.type === AppointmentsType.SUBSCRIPTION 
+                                  ? "SUBSCRIPTION"
+                                  : "CONSULTATION" // Default to consultation for other types
+                            }
+                            callsPerWeek={
+                              request.type === AppointmentsType.SUBSCRIPTION
+                                ? request.requiredSlots / 4 / (request.requiredSlots / (4 * (request.requiredSlots / 4)))
+                                : undefined
+                            }
+                            durationInMonths={
+                              request.type === AppointmentsType.SUBSCRIPTION
+                                ? request.requiredSlots / (4 * (request.requiredSlots / 4))
+                                : undefined
+                            }
                           />
                           <DialogFooter>
                             <Button
