@@ -3,6 +3,9 @@ import { User, ConsultationPlan, SubscriptionPlan } from "@prisma/client";
 import { TConsultantProfile } from "@/types/consultant";
 import { TSlotTiming } from "@/types/slots";
 import PricingToggle from "./PricingToggle";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { DollarSignIcon, ClockIcon, CalendarIcon } from "lucide-react";
 
 import { PricingOption } from "../defaults";
 
@@ -84,39 +87,78 @@ export function ConsultationPricing({
     "subscription",
   );
 
+  // Get the primary consultation plan for quick pricing display
+  const primaryPlan = consultantDetails.consultationPlans[0];
+
   return (
-    <div className="flex flex-col items-center w-1/4 ml-10">
-      <Image
-        alt="Profile"
-        className="rounded-full mb-6"
-        height="1350"
-        src={userDetails.image || "/placeholder.svg"}
-        style={{
-          aspectRatio: "1080/1350",
-          objectFit: "cover",
-        }}
-        width="1080"
-      />
-      <div className="card p-6 bg-white shadow-lg rounded-lg w-full">
-        <h3 className="text-lg font-semibold mb-4">Consultation Pricing</h3>
-        <PricingToggle
-          consultationOptions={consultationOptions}
-          subscriptionOptions={subscriptionOptions}
-          consultantDetails={consultantDetails}
-          userDetails={userDetails}
-          handleConsultationBooking={handleConsultationBooking}
-          handleSubscriptionBooking={handleSubscriptionBooking}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-          currentDate={currentDate}
-          setCurrentDate={setCurrentDate}
-          renderCalendar={renderCalendar}
-          slotTimings={slotTimings}
-          selectedSlot={selectedSlot}
-          setSelectedSlot={setSelectedSlot}
-          timezone={timezone}
-        />
-      </div>
+    <div className="space-y-6">
+      {/* Quick Pricing Card */}
+      <Card className="bg-gradient-to-br from-gray-900 to-black text-white border-0 shadow-2xl overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
+
+        <CardHeader className="relative z-10 pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-2xl font-bold">
+              Consultation Pricing
+            </CardTitle>
+            <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+              Featured
+            </Badge>
+          </div>
+        </CardHeader>
+
+        <CardContent className="relative z-10">
+          {primaryPlan && (
+            <div className="space-y-6">
+              <div className="text-center space-y-2">
+                <div className="flex items-center justify-center text-5xl font-bold">
+                  <DollarSignIcon className="w-8 h-8 mr-1" />
+                  {primaryPlan.price}
+                </div>
+                <div className="flex items-center justify-center gap-2 text-gray-300">
+                  <ClockIcon className="w-4 h-4" />
+                  <span>{primaryPlan.durationInHours} hour consultation</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="flex items-center gap-2 text-gray-300">
+                  <CalendarIcon className="w-4 h-4" />
+                  <span>Flexible Scheduling</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-300">
+                  <ClockIcon className="w-4 h-4" />
+                  <span>Instant Booking</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Full Pricing Component */}
+      <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+        <CardContent className="p-0">
+          <PricingToggle
+            consultationOptions={consultationOptions}
+            subscriptionOptions={subscriptionOptions}
+            consultantDetails={consultantDetails}
+            userDetails={userDetails}
+            handleConsultationBooking={handleConsultationBooking}
+            handleSubscriptionBooking={handleSubscriptionBooking}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            currentDate={currentDate}
+            setCurrentDate={setCurrentDate}
+            renderCalendar={renderCalendar}
+            slotTimings={slotTimings}
+            selectedSlot={selectedSlot}
+            setSelectedSlot={setSelectedSlot}
+            timezone={timezone}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

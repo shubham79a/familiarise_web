@@ -183,14 +183,31 @@ export function ConsultantAvailability({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h3 className="text-2xl font-bold mb-3 bg-gradient-to-r from-gray-700 to-gray-900 bg-clip-text text-transparent">
-          Consultant Availability
-        </h3>
-        <p className="text-sm text-gray-600 bg-gradient-to-br from-gray-50 to-white px-4 py-2 rounded-xl border border-gray-200/50 shadow-sm inline-block">
+    <div className="bg-white/80 backdrop-blur-sm border-0 shadow-lg rounded-2xl p-8">
+      <div className="text-center lg:text-left mb-8">
+        <div className="flex items-center justify-center lg:justify-start gap-3 mb-4">
+          <div className="p-2 bg-gray-900 rounded-lg">
+            <svg
+              className="w-6 h-6 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </div>
+          <h3 className="text-3xl font-bold text-gray-900">
+            Availability Schedule
+          </h3>
+        </div>
+        <p className="text-lg text-gray-600 max-w-2xl">
           {consultantDetails.scheduleType === "WEEKLY"
-            ? "Weekly schedule. Use the 'Book Now' button to schedule a meeting."
+            ? "Weekly recurring schedule. Use the 'Book Now' button to schedule a meeting."
             : "Custom schedule for the next 7 days. Use the 'Book Now' button to schedule a meeting."}
         </p>
       </div>

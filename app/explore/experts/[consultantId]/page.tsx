@@ -289,48 +289,59 @@ export default function ExpertProfile(
   }
 
   return (
-    <div key={params.consultantId} className="flex justify-center py-40">
-      <div className="flex flex-col w-1/2">
-        <div className="space-y-8">
-          <ProfileHeader
-            userDetails={userDetails}
-            consultantDetails={consultantDetails}
-          />
+    <div
+      key={params.consultantId}
+      className="min-h-screen bg-gradient-to-br from-gray-50 to-white"
+    >
+      <div className="container mx-auto px-4 py-8 lg:py-16">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 lg:gap-12">
+          {/* Main Content - Takes 2 columns on XL screens */}
+          <div className="xl:col-span-2 space-y-8 lg:space-y-12">
+            <ProfileHeader
+              userDetails={userDetails}
+              consultantDetails={consultantDetails}
+            />
 
-          <AboutSection
-            userDetails={userDetails}
-            consultantDetails={consultantDetails}
-          />
+            <AboutSection
+              userDetails={userDetails}
+              consultantDetails={consultantDetails}
+            />
 
-          <ConsultantAvailability
-            consultantDetails={consultantDetails}
-            timezone={timezone || "UTC"}
-          />
+            <ConsultantAvailability
+              consultantDetails={consultantDetails}
+              timezone={timezone || "UTC"}
+            />
+
+            <ClassesAndWebinars
+              classPlans={consultantDetails.classPlans}
+              webinarPlans={consultantDetails.webinarPlans}
+            />
+
+            <ReviewsSection reviews={reviews} />
+          </div>
+
+          {/* Pricing Sidebar - Takes 1 column, stacks on mobile */}
+          <div className="xl:col-span-1">
+            <div className="sticky top-8">
+              <ConsultationPricing
+                userDetails={userDetails}
+                consultantDetails={consultantDetails}
+                handleConsultationBooking={handleConsultationBooking}
+                handleSubscriptionBooking={handleSubscriptionBooking}
+                selectedDate={selectedDate}
+                setSelectedDate={setSelectedDate}
+                currentDate={currentDate}
+                setCurrentDate={setCurrentDate}
+                renderCalendar={renderCalendar}
+                slotTimings={slotTimings}
+                selectedSlot={selectedSlot}
+                setSelectedSlot={setSelectedSlot}
+                timezone={timezone || "UTC"}
+              />
+            </div>
+          </div>
         </div>
-
-        <ClassesAndWebinars
-          classPlans={consultantDetails.classPlans}
-          webinarPlans={consultantDetails.webinarPlans}
-        />
-
-        <ReviewsSection reviews={reviews} />
       </div>
-
-      <ConsultationPricing
-        userDetails={userDetails}
-        consultantDetails={consultantDetails}
-        handleConsultationBooking={handleConsultationBooking}
-        handleSubscriptionBooking={handleSubscriptionBooking}
-        selectedDate={selectedDate}
-        setSelectedDate={setSelectedDate}
-        currentDate={currentDate}
-        setCurrentDate={setCurrentDate}
-        renderCalendar={renderCalendar}
-        slotTimings={slotTimings}
-        selectedSlot={selectedSlot}
-        setSelectedSlot={setSelectedSlot}
-        timezone={timezone || "UTC"}
-      />
     </div>
   );
 }
